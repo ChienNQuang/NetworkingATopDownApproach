@@ -1,0 +1,63 @@
+Web Server assignment
+
+This assignment requires me to write the finishing code of an HTTP Web Server that runs on TCP
+
+First we have to create a server socket that every new request/handshaking request touches:
+
+serverSocket = socket(AF_INET, SOCK_STREAM)
+
+then we prepare a server socket by binding it to port 80 and put it on listen, the 1 specifies the maximum number of queued connections
+
+serverSocket.bind(('', 80))
+serverSocket.listen(1)
+
+Then, we start a while true to start receiving requests
+
+whenever a request comes, it will invoke the accept method on the socket and return the newly created connection socket and the address of the client initiating the request
+
+the next code is put into a try-except block to handle IO error of reading the requested resource
+
+we receive the request object through the use of recv() method and accepting a buffer of 2048 bytes, which is kind of convention, then we decode from byte stream to string type:
+
+message = connectionSocket.recv(2048).decode()
+
+After that, we extract the uri of the requested resource, find it and put it into outputdata: 
+
+filename = message.split()[1] 
+f = open(filename[1:]) 
+outputdata = f.readlines()
+
+Note that we have to use readlines() here, if we use read(), it will result after that we iterate through each character, not each line
+
+After having the request data, we send our response to socket
+
+One big note here is that, we can send separate lines of our response to the socket individually:
+
+connectionSocket.send("HTTP/1.1 200 OK\r\n".encode())
+connectionSocket.send("Content-Type: text/html\r\n".encode())
+connectionSocket.send("Abc: abc\r\n\r\n".encode())
+
+this works because the socket accepts, as long as the lines are in the right order, seperate lines to be sent individually in order to enable flexibility
+
+and the req/res format can look like this:
+First line\r\nHeader info\r\nMessage body\r\n
+
+We can ignore the header info, but when we don't do, we have to separate the headers with a \r\n
+
+And after that, looping through the data, encode each line and send to the socket:
+for i in range(0, len(outputdata)): 
+    connectionSocket.send(outputdata[i].encode())
+    connectionSocket.send("\r\n".encode())
+
+and close the connection socket: 
+
+connectionSocket.close()
+
+this way, we successfully handle the case when the resource is found
+
+when there is no such resource, an IOError is thrown, and the except block is entered:
+
+connectionSocket.send("HTTP/1.1 404 Not Found\r\na:a\r\n\r\n".encode())
+connectionSocket.close()
+
+which just do its work, sending a 404 back to the client and close the connection
